@@ -65,4 +65,4 @@ evans:
 redis:
 	docker run --name redis -p 6379:6379 -d redis:7-alpine
 
-.PHONY: network postgres createdb dropdb migrateup migratedown test
+.PHONY: network postgres createdb dropdb migrateup migratedown test server
