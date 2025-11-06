@@ -9,55 +9,61 @@ import (
 	db "github.com/yilinyo/project_bank/db/sqlc"
 )
 
-type createAccountRequest struct {
-	Owner    string `json:"owner" binding:"required,min=1"`
-	Currency string `json:"currency" binding:"required,oneof=USD EUR"`
+type createEntryRequest struct {
+	AccountID int64 `json:"account_id" binding:"required,min=1"`
+	Amount    int64 `json:"amount" binding:"required"`
 }
-type getAccountRequest struct {
+
+type getEntryRequest struct {
 	Id int64 `uri:"id" binding:"required"`
 }
 
-type deleteAccountRequest struct {
+type deleteEntryRequest struct {
 	Id int64 `uri:"id" binding:"required"`
 }
 
-type updateAccountRequest struct {
-	Id      int64 `uri:"id" binding:"required"`
-	Balance int64 `json:"balance" `
+type updateEntryRequest struct {
+	Id     int64 `uri:"id" binding:"required"`
+	Amount int64 `json:"amount" binding:"required"`
 }
 
-type listAccountRequest struct {
+type listEntryRequest struct {
 	PageID   int32 `form:"page_id" binding:"required,min=1"`
 	PageSize int32 `form:"page_size" binding:"required,min=1"`
 }
 
-func (server *Server) createAccount(ctx *gin.Context) {
+type getEntryByAccountIdRequest struct {
+	AccountId int64 `uri:"account_id" binding:"required"`
+}
 
-	var req createAccountRequest
+func (server *Server) createEntry(ctx *gin.Context) {
+	var req createEntryRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
-	arg := db.CreateAccountParams{
-		Owner:    req.Owner,
-		Currency: req.Currency,
-		Balance:  0,
+
+	arg := db.CreateEntryParams{
+		AccountID: req.AccountID,
+		Amount:    req.Amount,
 	}
-	account, err := server.store.CreateAccount(ctx, arg)
+
+	entry, err := server.store.CreateEntry(ctx, arg)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
-	ctx.JSON(http.StatusOK, account)
+	ctx.JSON(http.StatusOK, entry)
 }
-func (server *Server) getAccount(ctx *gin.Context) {
-	var req getAccountRequest
+
+func (server *Server) getEntry(ctx *gin.Context) {
+	var req getEntryRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
 
-	account, err := server.store.GetAccount(ctx, req.Id)
+	entry, err := server.store.GetEntry(ctx, req.Id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			ctx.JSON(http.StatusNotFound, errorResponse(err))
@@ -66,40 +72,37 @@ func (server *Server) getAccount(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
-	ctx.JSON(http.StatusOK, account)
-
+	ctx.JSON(http.StatusOK, entry)
 }
 
-func (server *Server) listAccount(ctx *gin.Context) {
-	var req listAccountRequest
+func (server *Server) listEntry(ctx *gin.Context) {
+	var req listEntryRequest
 	if err := ctx.ShouldBindQuery(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
 
-	args := db.ListAccountsParams{
+	args := db.ListEntriesParams{
 		Limit:  req.PageSize,
 		Offset: (req.PageID - 1) * req.PageSize,
 	}
 
-	accounts, err := server.store.ListAccounts(ctx, args)
+	entries, err := server.store.ListEntries(ctx, args)
 	if err != nil {
-
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
-	ctx.JSON(http.StatusOK, accounts)
-
+	ctx.JSON(http.StatusOK, entries)
 }
 
-func (server *Server) deleteAccount(ctx *gin.Context) {
-	var req deleteAccountRequest
+func (server *Server) deleteEntry(ctx *gin.Context) {
+	var req deleteEntryRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
 
-	err := server.store.DeleteAccount(ctx, req.Id)
+	err := server.store.DeleteEntry(ctx, req.Id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			ctx.JSON(http.StatusNotFound, errorResponse(err))
@@ -109,11 +112,10 @@ func (server *Server) deleteAccount(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, "delete success")
-
 }
 
-func (server *Server) updateAccount(ctx *gin.Context) {
-	var req updateAccountRequest
+func (server *Server) updateEntry(ctx *gin.Context) {
+	var req updateEntryRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
@@ -123,17 +125,12 @@ func (server *Server) updateAccount(ctx *gin.Context) {
 		return
 	}
 
-	if req.Balance < 0 {
-		ctx.JSON(http.StatusBadRequest, errorResponse(errors.New("negative balance")))
-		return
+	args := db.UpdateEntryParams{
+		ID:     req.Id,
+		Amount: req.Amount,
 	}
 
-	args := db.UpdateAccountParams{
-		ID:      req.Id,
-		Balance: req.Balance,
-	}
-
-	account, err := server.store.UpdateAccount(ctx, args)
+	entry, err := server.store.UpdateEntry(ctx, args)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			ctx.JSON(http.StatusNotFound, errorResponse(err))
@@ -142,6 +139,21 @@ func (server *Server) updateAccount(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
-	ctx.JSON(http.StatusOK, account)
-
+	ctx.JSON(http.StatusOK, entry)
 }
+
+func (server *Server) getEntryByAccountId(ctx *gin.Context) {
+	var req getEntryByAccountIdRequest
+	if err := ctx.ShouldBindUri(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	entries, err := server.store.GetEntryByAccountId(ctx, req.AccountId)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	ctx.JSON(http.StatusOK, entries)
+}
+
