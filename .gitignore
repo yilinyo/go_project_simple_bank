@@ -1,0 +1,17 @@
+# ---- macOS 系统文件 ----
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+__MACOSX/
+
+# ---- IntelliJ IDEA ----
+.idea/
+*.iml
+out/
+
+# ---- 编译文件 ----
+target/
+build/
+*.class
+
