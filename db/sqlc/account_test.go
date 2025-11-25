@@ -3,10 +3,11 @@ package db
 import (
 	"context"
 	"fmt"
-	"github.com/stretchr/testify/require"
-	"github.com/yilinyo/project_bank/db/util"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
+	"github.com/yilinyo/project_bank/db/util"
 )
 
 func createRandomAccount(t *testing.T) Account {
@@ -23,6 +24,7 @@ func createRandomAccount(t *testing.T) Account {
 	require.Equal(t, arg.Balance, account.Balance)
 	require.NotZero(t, account.ID)
 	require.NotZero(t, account.CreatedAt)
+	fmt.Println(account)
 
 	return account
 }
