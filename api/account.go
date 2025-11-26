@@ -15,7 +15,7 @@ type createAccountRequest struct {
 	Currency string `json:"currency" binding:"required,currency"`
 }
 type getAccountRequest struct {
-	Id int64 `uri:"id" binding:"required"`
+	Id int64 `uri:"id" binding:"required,min=1"`
 }
 
 type deleteAccountRequest struct {
