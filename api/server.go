@@ -1,29 +1,47 @@
 package api
 
 import (
+	"fmt"
+
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
 	db "github.com/yilinyo/project_bank/db/sqlc"
+	"github.com/yilinyo/project_bank/db/util"
+	"github.com/yilinyo/project_bank/token"
 )
 
 type Server struct {
-	store  db.Store
-	router *gin.Engine
+	config     util.Config
+	store      db.Store
+	tokenMaker token.Maker
+	router     *gin.Engine
 }
 
-func NewServer(store db.Store) *Server {
-	server := &Server{store: store}
-	router := gin.Default()
+func NewServer(config util.Config, store db.Store) (*Server, error) {
+	tokenMaker, err := token.NewPasetoMaker(config.TokenSymmetricKey)
+	if err != nil {
+		return nil, fmt.Errorf("error creating token maker: %w", err)
+	}
+	server := &Server{
+		config:     config,
+		store:      store,
+		tokenMaker: tokenMaker,
+	}
 
 	//register validator 处理注册货币验证器
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
 		err := v.RegisterValidation("currency", validateCurrency)
 		if err != nil {
-			return nil
+			return nil, fmt.Errorf("error registering validation: %w", err)
 		}
 	}
+	server.SetupRouter()
+	return server, nil
+}
 
+func (server *Server) SetupRouter() {
+	router := gin.Default()
 	// Account routes
 	router.POST("/accounts", server.createAccount)
 	router.GET("/accounts/:id", server.getAccount)
@@ -51,8 +69,9 @@ func NewServer(store db.Store) *Server {
 	//User routes
 	router.POST("/users", server.createUser)
 	router.GET("/users/:username", server.getUser)
+	router.POST("/users/login", server.loginUser)
 	server.router = router
-	return server
+
 }
 
 //Start runs

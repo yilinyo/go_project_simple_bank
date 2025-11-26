@@ -95,7 +95,7 @@ func TestCreatUserAPI(t *testing.T) {
 			data, err := json.Marshal(tc.body)
 			store := mockdb.NewMockStore(ctrl)
 			tc.buildStub(store)
-			server := NewServer(store)
+			server := newTestServer(t, store)
 			recorder := httptest.NewRecorder()
 			url := fmt.Sprintf("/users")
 
