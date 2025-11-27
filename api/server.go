@@ -42,34 +42,39 @@ func NewServer(config util.Config, store db.Store) (*Server, error) {
 
 func (server *Server) SetupRouter() {
 	router := gin.Default()
-	// Account routes
-	router.POST("/accounts", server.createAccount)
-	router.GET("/accounts/:id", server.getAccount)
-	router.GET("/accounts", server.listAccount)
-	router.DELETE("/accounts/:id", server.deleteAccount)
-	router.PUT("/accounts/:id", server.updateAccount)
-
-	// Transfer routes
-	router.POST("/transfers", server.createTransfer)
-	router.GET("/transfers/:id", server.getTransfer)
-	router.GET("/transfers", server.listTransfer)
-	router.DELETE("/transfers/:id", server.deleteTransfer)
-	router.PUT("/transfers/:id", server.updateTransfer)
-	router.GET("/transfers/from/:account_id", server.getTransferByFromAccountId)
-	router.GET("/transfers/to/:account_id", server.getTransferByToAccountId)
-
-	// Entry routes
-	router.POST("/entries", server.createEntry)
-	router.GET("/entries/:id", server.getEntry)
-	router.GET("/entries", server.listEntry)
-	router.DELETE("/entries/:id", server.deleteEntry)
-	router.PUT("/entries/:id", server.updateEntry)
-	router.GET("/entries/account/:account_id", server.getEntryByAccountId)
 
 	//User routes
 	router.POST("/users", server.createUser)
-	router.GET("/users/:username", server.getUser)
 	router.POST("/users/login", server.loginUser)
+
+	//注册拦截中间件
+	authRouter := router.Group("/").Use(authMiddleware(server.tokenMaker))
+
+	authRouter.GET("/users/:username", server.getUser)
+	// Account routes
+	authRouter.POST("/accounts", server.createAccount)
+	authRouter.GET("/accounts/:id", server.getAccount)
+	authRouter.GET("/accounts", server.listAccount)
+	authRouter.DELETE("/accounts/:id", server.deleteAccount)
+	authRouter.PUT("/accounts/:id", server.updateAccount)
+
+	// Transfer routes
+	authRouter.POST("/transfers", server.createTransfer)
+	authRouter.GET("/transfers/:id", server.getTransfer)
+	authRouter.GET("/transfers", server.listTransfer)
+	authRouter.DELETE("/transfers/:id", server.deleteTransfer)
+	authRouter.PUT("/transfers/:id", server.updateTransfer)
+	authRouter.GET("/transfers/from/:account_id", server.getTransferByFromAccountId)
+	authRouter.GET("/transfers/to/:account_id", server.getTransferByToAccountId)
+
+	// Entry routes
+	authRouter.POST("/entries", server.createEntry)
+	authRouter.GET("/entries/:id", server.getEntry)
+	authRouter.GET("/entries", server.listEntry)
+	authRouter.DELETE("/entries/:id", server.deleteEntry)
+	authRouter.PUT("/entries/:id", server.updateEntry)
+	authRouter.GET("/entries/account/:account_id", server.getEntryByAccountId)
+
 	server.router = router
 
 }

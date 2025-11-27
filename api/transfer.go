@@ -3,16 +3,24 @@ package api
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	db "github.com/yilinyo/project_bank/db/sqlc"
+	"github.com/yilinyo/project_bank/token"
+)
+
+const (
+	FROM_ID = "from_id"
+	TO_ID   = "to_id"
 )
 
 type createTransferRequest struct {
-	FromAccountID int64 `json:"from_account_id" binding:"required,min=1"`
-	ToAccountID   int64 `json:"to_account_id" binding:"required,min=1"`
-	Amount        int64 `json:"amount" binding:"required,gt=0"`
+	FromAccountID int64  `json:"from_account_id" binding:"required,min=1"`
+	ToAccountID   int64  `json:"to_account_id" binding:"required,min=1"`
+	Amount        int64  `json:"amount" binding:"required,gt=0"`
+	Currency      string `json:"currency" binding:"required,currency"`
 }
 
 type getTransferRequest struct {
@@ -48,14 +56,27 @@ func (server *Server) createTransfer(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, errorResponse(errors.New("from_account_id and to_account_id cannot be the same")))
 		return
 	}
+	//交易账户必须是 相同货币
 
-	arg := db.CreateTransferParams{
+	//转账用户要核实当前登录人
+	_, valid := server.validAccount(ctx, req.FromAccountID, req.Currency, FROM_ID)
+	if !valid {
+		return
+	}
+	//被账用户不做限制
+	_, valid = server.validAccount(ctx, req.ToAccountID, req.Currency, TO_ID)
+	if !valid {
+		return
+	}
+	//todo： 可以进行跨货币交易
+
+	arg := db.TransferTxParams{
 		FromAccountID: req.FromAccountID,
 		ToAccountID:   req.ToAccountID,
 		Amount:        req.Amount,
 	}
 
-	transfer, err := server.store.CreateTransfer(ctx, arg)
+	transfer, err := server.store.TransferTx(ctx, arg)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
@@ -183,4 +204,32 @@ func (server *Server) getTransferByToAccountId(ctx *gin.Context) {
 	}
 	ctx.JSON(http.StatusOK, transfers)
 }
+func (server *Server) validAccount(ctx *gin.Context, accountID int64, currency string, accountType string) (db.Account, bool) {
+	account, err := server.store.GetAccount(ctx, accountID)
+	if accountType == FROM_ID {
+		payload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+		if account.Owner != payload.Username {
+			err := errors.New("from account does not belong the authenticated user")
+			ctx.JSON(http.StatusUnauthorized, errorResponse(err))
+			return db.Account{}, false
+		}
 
+	}
+	if err != nil {
+		if errors.Is(err, db.ErrRecordNotFound) {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return account, false
+		}
+
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return account, false
+	}
+
+	if account.Currency != currency {
+		err := fmt.Errorf("account [%d] currency mismatch: %s vs %s", account.ID, account.Currency, currency)
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return account, false
+	}
+
+	return account, true
+}
