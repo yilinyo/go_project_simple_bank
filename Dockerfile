@@ -9,12 +9,18 @@ WORKDIR /usr/src/app
 
 COPY . .
 RUN go build -v -o main main.go
+RUN apk add curl
+RUN curl -L https://github.com/golang-migrate/migrate/releases/download/v4.19.0/migrate.linux-amd64.tar.gz | tar xvz
 
 #Run Stage
 FROM alpine:3.13
 WORKDIR /usr/src/app
 COPY --from=builder /usr/src/app/main .
+COPY --from=builder /usr/src/app/migrate ./migrate
 COPY app.env .
+COPY start.sh .
+COPY db/migration ./migration
 EXPOSE 8080
 
 CMD ["/usr/src/app/main"]
+ENTRYPOINT ["/usr/src/app/start.sh"]
