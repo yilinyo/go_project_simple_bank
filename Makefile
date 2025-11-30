@@ -47,7 +47,6 @@ server:
 
 mock:
 	mockgen -package mockdb -destination db/mock/store.go github.com/yilinyo/project_bank/db/sqlc Store
-	
 
 proto:
 	rm -f pb/*.go

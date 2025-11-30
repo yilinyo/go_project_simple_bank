@@ -5,11 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/lib/pq"
 	db "github.com/yilinyo/project_bank/db/sqlc"
 	"github.com/yilinyo/project_bank/db/util"
+	"github.com/yilinyo/project_bank/token"
 )
 
 type createUserRequest struct {
@@ -44,7 +47,7 @@ func (server *Server) createUser(ctx *gin.Context) {
 	}
 	hashpwd, err2 := util.HashPassword(req.Password)
 	if err2 != nil {
-		ctx.JSON(http.StatusInternalServerError, fmt.Errorf(""))
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err2))
 		return
 	}
 	arg := db.CreateUserParams{
@@ -97,8 +100,12 @@ type loginUserRequest struct {
 }
 
 type loginUserResponse struct {
-	AccessToken string             `json:"access_token" binding:"required,alphanum"`
-	User        createUserResponse `json:"user" binding:"required"`
+	SessionID             uuid.UUID          `json:"session_id"`
+	AccessToken           string             `json:"access_token" binding:"required,alphanum"`
+	AccessTokeExpiredAt   time.Time          `json:"access_token_expires_at" binding:"required"`
+	RefreshToken          string             `json:"refresh_token" `
+	RefreshTokenExpiresAt time.Time          `json:"refresh_token_expires_at"`
+	User                  createUserResponse `json:"user" binding:"required"`
 }
 
 func (server *Server) loginUser(ctx *gin.Context) {
@@ -123,14 +130,36 @@ func (server *Server) loginUser(ctx *gin.Context) {
 		ctx.JSON(http.StatusUnauthorized, errorResponse(fmt.Errorf("wrong password and username")))
 		return
 	}
-	token, _, err := server.tokenMaker.CreateToken(user.Username, "admin", server.config.AccessTokenDuration, 1)
+	accessToken, accessPayload, err := server.tokenMaker.CreateToken(user.Username, "admin", server.config.AccessTokenDuration, token.TokenTypeAccessToken)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
+	refreshToken, refreshPayload, err := server.tokenMaker.CreateToken(user.Username, "admin", server.config.RefreshTokenDuration, token.TokenTypeRefreshToken)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	session, err := server.store.CreateSession(ctx, db.CreateSessionParams{
+		ID:           refreshPayload.ID,
+		Username:     user.Username,
+		RefreshToken: refreshToken,
+		UserAgent:    ctx.Request.UserAgent(),
+		ClientIp:     ctx.ClientIP(),
+		IsBlocked:    false,
+		ExpiresAt:    refreshPayload.ExpiredAt,
+	},
+	)
+	if err != nil {
+		return
+	}
 	resp := loginUserResponse{
-		User:        newUserResponse(user),
-		AccessToken: token,
+		SessionID:             session.ID,
+		AccessToken:           accessToken,
+		AccessTokeExpiredAt:   accessPayload.ExpiredAt,
+		RefreshToken:          refreshToken,
+		RefreshTokenExpiresAt: refreshPayload.ExpiredAt,
+		User:                  newUserResponse(user),
 	}
 
 	ctx.JSON(http.StatusOK, resp)
