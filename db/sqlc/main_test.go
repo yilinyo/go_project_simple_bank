@@ -2,8 +2,10 @@ package db
 
 import (
 	"database/sql"
+
 	_ "github.com/lib/pq"
-	"github.com/yilinyo/project_bank/db/util"
+	"github.com/yilinyo/project_bank/util"
+
 	"log"
 	"os"
 	"testing"

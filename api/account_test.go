@@ -15,8 +15,8 @@ import (
 	"github.com/stretchr/testify/require"
 	mockdb "github.com/yilinyo/project_bank/db/mock"
 	db "github.com/yilinyo/project_bank/db/sqlc"
-	"github.com/yilinyo/project_bank/db/util"
 	"github.com/yilinyo/project_bank/token"
+	"github.com/yilinyo/project_bank/util"
 )
 
 func TestGetAccountAPI(t *testing.T) {

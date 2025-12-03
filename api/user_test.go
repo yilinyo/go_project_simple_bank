@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 	mockdb "github.com/yilinyo/project_bank/db/mock"
 	db "github.com/yilinyo/project_bank/db/sqlc"
-	"github.com/yilinyo/project_bank/db/util"
+	util2 "github.com/yilinyo/project_bank/util"
 )
 
 type eqCreateUserParamsMatcher struct {
@@ -28,7 +28,7 @@ func (e eqCreateUserParamsMatcher) Matches(x interface{}) bool {
 	if !ok {
 		return false
 	}
-	if !util.CheckPassword(e.password, arg.HashedPassword) {
+	if !util2.CheckPassword(e.password, arg.HashedPassword) {
 		return false
 	}
 
@@ -46,7 +46,7 @@ func EqCreateUserParams(arg db.CreateUserParams, password string) gomock.Matcher
 
 func TestCreatUserAPI(t *testing.T) {
 	user, password := randomUser(t)
-	hashPassword, err := util.HashPassword(password)
+	hashPassword, err := util2.HashPassword(password)
 	require.NoError(t, err)
 	print(hashPassword)
 
@@ -112,15 +112,15 @@ func TestCreatUserAPI(t *testing.T) {
 }
 
 func randomUser(t *testing.T) (user db.User, password string) {
-	password = util.RandomStr(8)
-	hashedPassword, err := util.HashPassword(password)
+	password = util2.RandomStr(8)
+	hashedPassword, err := util2.HashPassword(password)
 	require.NoError(t, err)
 
 	user = db.User{
-		Username:       util.RandomStr(6),
+		Username:       util2.RandomStr(6),
 		HashedPassword: hashedPassword,
-		FullName:       util.RandomStr(8),
-		Email:          util.RandomEmail(8),
+		FullName:       util2.RandomStr(8),
+		Email:          util2.RandomEmail(8),
 	}
 	return
 }

@@ -2,8 +2,10 @@ package db
 
 import (
 	"context"
+
 	"github.com/stretchr/testify/require"
-	"github.com/yilinyo/project_bank/db/util"
+	"github.com/yilinyo/project_bank/util"
+
 	"testing"
 	"time"
 )
