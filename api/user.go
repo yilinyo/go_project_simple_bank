@@ -11,8 +11,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 	db "github.com/yilinyo/project_bank/db/sqlc"
-	"github.com/yilinyo/project_bank/db/util"
 	"github.com/yilinyo/project_bank/token"
+	"github.com/yilinyo/project_bank/util"
 )
 
 type createUserRequest struct {

@@ -1,0 +1,15 @@
+
+syntax =  "proto3";
+
+package pb;
+
+option go_package = "github.com/yilinyo/project_bank/pb";
+
+// numbers are used to identify fields in the message binary format
+message User{
+    string username = 1;
+    string full_name = 2;
+    string email = 3;
+}
+
+

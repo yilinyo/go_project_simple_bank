@@ -6,20 +6,20 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/yilinyo/project_bank/db/util"
+	util2 "github.com/yilinyo/project_bank/util"
 )
 
 func createRandomUser(t *testing.T) User {
-	hashPassword, err := util.HashPassword(util.RandomStr(6))
+	hashPassword, err := util2.HashPassword(util2.RandomStr(6))
 	require.NoError(t, err)
 	if err != nil {
 		return User{}
 	}
 	arg := CreateUserParams{
-		Username:       util.RandomStr(8),
+		Username:       util2.RandomStr(8),
 		HashedPassword: hashPassword,
-		FullName:       util.RandomStr(5),
-		Email:          util.RandomEmail(8),
+		FullName:       util2.RandomStr(5),
+		Email:          util2.RandomEmail(8),
 	}
 	user, err := testQueries.CreateUser(context.Background(), arg)
 	require.NoError(t, err)

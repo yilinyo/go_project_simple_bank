@@ -7,8 +7,8 @@ import (
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
 	db "github.com/yilinyo/project_bank/db/sqlc"
-	"github.com/yilinyo/project_bank/db/util"
 	"github.com/yilinyo/project_bank/token"
+	"github.com/yilinyo/project_bank/util"
 )
 
 type Server struct {
