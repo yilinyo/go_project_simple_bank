@@ -3,11 +3,15 @@ package main
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"net"
 	"net/http"
 
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	_ "github.com/lib/pq"
 	"github.com/yilinyo/project_bank/api"
@@ -39,11 +43,14 @@ func main() {
 	if err != nil {
 		log.Fatal("error opening db:", err)
 	}
+
+	runDBMigration(config.MigrationURL, config.DBSource)
 	store := db.NewStore(conn)
 
 	//选择 开启http 还是 grpc 还是httpGateWay
 	go runGatewayServer(config, store)
 	runGrpcServer(config, store)
+	//runGinServer(config, store)
 
 }
 
@@ -120,4 +127,18 @@ func runGatewayServer(config util.Config, store db.Store) {
 	if err != nil {
 		log.Fatal("cannot start httpGateway server", err)
 	}
+}
+
+func runDBMigration(migrationURL string, dbSource string) {
+	migration, err := migrate.New(migrationURL, dbSource)
+	if err != nil {
+		log.Fatal("error initializing migration:", err)
+	}
+
+	if err = migration.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		log.Fatal("error running migrate up", err)
+	}
+
+	log.Println("db migrate up done")
+
 }
