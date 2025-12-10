@@ -3,6 +3,7 @@ syntax =  "proto3";
 package pb;
 import "rpc_create_user.proto";
 import "rpc_user_login.proto";
+import "rpc_update_user.proto";
 import "google/api/annotations.proto";
 
 option go_package = "github.com/yilinyo/project_bank/pb";
@@ -15,6 +16,15 @@ service SimpleBank {
     option (google.api.http) = {
         post: "/v1/create_user"
        body: "*"
+    };
+
+  }
+
+  rpc UpdateUser (UpdateUserRequest) returns (UpdateUserResponse){
+
+    option (google.api.http) = {
+      post: "/v1/update_user"
+      body: "*"
     };
 
   }
