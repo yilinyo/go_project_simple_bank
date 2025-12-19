@@ -8,8 +8,10 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/hibiken/asynq"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/yilinyo/project_bank/worker"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -37,7 +39,7 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("cannot load config:")
 	}
-	if config.Environment == "development" {
+	if config.Environment == "prod" {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	}
 
@@ -46,12 +48,21 @@ func main() {
 		log.Fatal().Err(err).Msg("error opening db:")
 	}
 
+	redisOpt := asynq.RedisClientOpt{
+		Addr: config.RedisAddress,
+	}
+
+	taskDistributor := worker.NewRedisDistributor(redisOpt)
 	runDBMigration(config.MigrationURL, config.DBSource)
 	store := db.NewStore(conn)
 
+	//开启taskProcess 进行消费
+	go runTaskProcessor(redisOpt, store)
+
 	//选择 开启http 还是 grpc 还是httpGateWay
-	go runGatewayServer(config, store)
-	runGrpcServer(config, store)
+	go runGatewayServer(config, store, taskDistributor)
+	runGrpcServer(config, store, taskDistributor)
+
 	//runGinServer(config, store)
 
 }
@@ -67,9 +78,9 @@ func runGinServer(config util.Config, store db.Store) {
 	}
 }
 
-func runGrpcServer(config util.Config, store db.Store) {
+func runGrpcServer(config util.Config, store db.Store, d worker.TaskDistributor) {
 
-	server, err := gapi.NewServer(config, store)
+	server, err := gapi.NewServer(config, store, d)
 	if err != nil {
 		log.Fatal().Err(err).Msg("cannot create server:")
 	}
@@ -93,9 +104,9 @@ func runGrpcServer(config util.Config, store db.Store) {
 	}
 }
 
-func runGatewayServer(config util.Config, store db.Store) {
+func runGatewayServer(config util.Config, store db.Store, d worker.TaskDistributor) {
 
-	server, err := gapi.NewServer(config, store)
+	server, err := gapi.NewServer(config, store, d)
 	if err != nil {
 		log.Fatal().Msg("cannot create server:")
 	}
@@ -144,4 +155,13 @@ func runDBMigration(migrationURL string, dbSource string) {
 
 	log.Info().Msg("db migrate up done")
 
+}
+
+func runTaskProcessor(redisOpt asynq.RedisClientOpt, store db.Store) {
+	processor := worker.NewRedisTaskProcessor(redisOpt, store)
+	log.Info().Msg("task processor started")
+	err := processor.Start()
+	if err != nil {
+		log.Fatal().Err(err).Msg("cannot create runTask processor")
+	}
 }
