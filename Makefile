@@ -47,22 +47,21 @@ server:
 
 mock:
 	mockgen -package mockdb -destination db/mock/store.go github.com/yilinyo/project_bank/db/sqlc Store
-
+	mockgen -package mockwk -destination worker/mock/distributor.go github.com/yilinyo/project_bank/worker TaskDistributor
 proto:
 	rm -f pb/*.go
-	#rm -f doc/swagger/*.swagger.json
+	rm -f doc/swagger/*.swagger.json
 	protoc --proto_path=proto --go_out=pb --go_opt=paths=source_relative \
 	--go-grpc_out=pb --go-grpc_opt=paths=source_relative \
 	--grpc-gateway_out=pb --grpc-gateway_opt=paths=source_relative \
+	--openapiv2_out=doc/swagger --openapiv2_opt=allow_merge=true,merge_file_name=simple_bank \
 	proto/*.proto
-#	--openapiv2_out=doc/swagger --openapiv2_opt=allow_merge=true,merge_file_name=simple_bank \
-#	proto/*.proto
 #	statik -src=./doc/swagger -dest=./doc
 
 evans:
 	evans --host localhost --port 9090 -r repl
 
 redis:
-	docker run --name redis -p 6379:6379 -d redis:7-alpine
+	docker run --name redis -p 6379:6379 -d redis:latest
 
 .PHONY: network postgres createdb dropdb migrateup migratedown server mock proto

@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/require"
 	util2 "github.com/yilinyo/project_bank/util"
 )
@@ -21,7 +22,7 @@ func createRandomUser(t *testing.T) User {
 		FullName:       util2.RandomStr(5),
 		Email:          util2.RandomEmail(8),
 	}
-	user, err := testQueries.CreateUser(context.Background(), arg)
+	user, err := testStore.CreateUser(context.Background(), arg)
 	require.NoError(t, err)
 	require.NotEmpty(t, user)
 	require.Equal(t, arg.Username, user.Username)
@@ -41,7 +42,7 @@ func TestCreateUser(t *testing.T) {
 func TestGetUser(t *testing.T) {
 
 	user1 := createRandomUser(t)
-	user2, err := testQueries.GetUser(context.Background(), user1.Username)
+	user2, err := testStore.GetUser(context.Background(), user1.Username)
 	require.NoError(t, err)
 	require.NotEmpty(t, user2)
 	require.Equal(t, user1.Username, user2.Username)
@@ -50,4 +51,22 @@ func TestGetUser(t *testing.T) {
 	require.Equal(t, user1.CreatedAt, user2.CreatedAt)
 	require.WithinDuration(t, user1.CreatedAt, user2.CreatedAt, time.Second)
 
+}
+
+func TestUpdateUser(t *testing.T) {
+	user := createRandomUser(t)
+	newFullName := util2.RandomStr(10)
+	arg := UpdateUserParams{
+		Username: user.Username,
+		FullName: pgtype.Text{
+			String: newFullName,
+			Valid:  true,
+		},
+	}
+	u, err := testStore.UpdateUser(context.Background(), arg)
+	require.NoError(t, err)
+	require.Equal(t, user.Username, u.Username)
+	require.Equal(t, newFullName, u.FullName)
+	require.Equal(t, user.Email, u.Email)
+	//require.WithinDuration(t, user.CreatedAt, u.CreatedAt, time.Second)
 }

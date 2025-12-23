@@ -25,7 +25,7 @@ func CreateTestEntry(t *testing.T) Entry {
 		AccountID: account.ID,
 		Amount:    util.RandomEntryMoney(),
 	}
-	entry, err := testQueries.CreateEntry(context.Background(), arg)
+	entry, err := testStore.CreateEntry(context.Background(), arg)
 	require.NoError(t, err)
 	require.NotEmpty(t, entry)
 	require.Equal(t, arg.AccountID, entry.AccountID)
@@ -39,7 +39,7 @@ func CreateTestEntry(t *testing.T) Entry {
 func TestGetEntryByID(t *testing.T) {
 
 	entry := CreateTestEntry(t)
-	entry2, err := testQueries.GetEntry(context.Background(), entry.ID)
+	entry2, err := testStore.GetEntry(context.Background(), entry.ID)
 	require.NoError(t, err)
 	require.NotEmpty(t, entry2)
 	require.Equal(t, entry.ID, entry2.ID)
@@ -52,7 +52,7 @@ func TestGetEntryByID(t *testing.T) {
 func TestGetEntryByAccountID(t *testing.T) {
 
 	entry := CreateTestEntry(t)
-	entry2, err := testQueries.GetEntryByAccountId(context.Background(), entry.AccountID)
+	entry2, err := testStore.GetEntryByAccountId(context.Background(), entry.AccountID)
 	require.NoError(t, err)
 	require.NotEmpty(t, entry2)
 	for _, entry := range entry2 {
@@ -72,7 +72,7 @@ func TestModifyEntry(t *testing.T) {
 		Amount: util.RandomEntryMoney(),
 	}
 
-	entry2, err := testQueries.UpdateEntry(context.Background(), arg)
+	entry2, err := testStore.UpdateEntry(context.Background(), arg)
 	require.NoError(t, err)
 	require.NotEmpty(t, entry2)
 	require.Equal(t, entry1.ID, entry2.ID)
@@ -83,10 +83,10 @@ func TestModifyEntry(t *testing.T) {
 }
 func TestDeleteEntry(t *testing.T) {
 	entry1 := CreateTestEntry(t)
-	err := testQueries.DeleteEntry(context.Background(), entry1.ID)
+	err := testStore.DeleteEntry(context.Background(), entry1.ID)
 	require.NoError(t, err)
 
-	entry2, err := testQueries.GetEntry(context.Background(), entry1.ID)
+	entry2, err := testStore.GetEntry(context.Background(), entry1.ID)
 	require.Error(t, err)
 	//require.EqualError(t, err, ErrRecordNotFound.Error())
 	require.Empty(t, entry2)
@@ -102,7 +102,7 @@ func TestListEntry(t *testing.T) {
 		Offset: 0,
 	}
 
-	entries, err := testQueries.ListEntries(context.Background(), arg)
+	entries, err := testStore.ListEntries(context.Background(), arg)
 	require.NoError(t, err)
 	require.NotEmpty(t, entries)
 
