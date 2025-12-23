@@ -17,6 +17,7 @@ UPDATE users
 SET hashed_password = COALESCE(SQLC.narg(hashed_password), hashed_password),
     password_changed_at = COALESCE(SQLC.narg(password_changed_at), password_changed_at),
     full_name = COALESCE(SQLC.narg(full_name), full_name),
-    email = COALESCE(SQLC.narg(email), email)
+    email = COALESCE(SQLC.narg(email), email),
+    is_email_verified = COALESCE(SQLC.narg(is_email_verified), is_email_verified)
 WHERE username = SQLC.arg(username)
 RETURNING *;

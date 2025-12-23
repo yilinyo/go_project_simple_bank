@@ -24,7 +24,7 @@ const (
 // numbers are used to identify fields in the message binary format
 type UpdateUserRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Username      *string                `protobuf:"bytes,1,opt,name=username,proto3,oneof" json:"username,omitempty"`
+	Username      string                 `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
 	FullName      *string                `protobuf:"bytes,2,opt,name=full_name,json=fullName,proto3,oneof" json:"full_name,omitempty"`
 	Password      *string                `protobuf:"bytes,3,opt,name=password,proto3,oneof" json:"password,omitempty"`
 	Email         *string                `protobuf:"bytes,4,opt,name=email,proto3,oneof" json:"email,omitempty"`
@@ -63,8 +63,8 @@ func (*UpdateUserRequest) Descriptor() ([]byte, []int) {
 }
 
 func (x *UpdateUserRequest) GetUsername() string {
-	if x != nil && x.Username != nil {
-		return *x.Username
+	if x != nil {
+		return x.Username
 	}
 	return ""
 }
@@ -139,13 +139,12 @@ var File_rpc_update_user_proto protoreflect.FileDescriptor
 const file_rpc_update_user_proto_rawDesc = "" +
 	"\n" +
 	"\x15rpc_update_user.proto\x12\x02pb\x1a\n" +
-	"user.proto\"\xc4\x01\n" +
-	"\x11UpdateUserRequest\x12\x1f\n" +
-	"\busername\x18\x01 \x01(\tH\x00R\busername\x88\x01\x01\x12 \n" +
-	"\tfull_name\x18\x02 \x01(\tH\x01R\bfullName\x88\x01\x01\x12\x1f\n" +
-	"\bpassword\x18\x03 \x01(\tH\x02R\bpassword\x88\x01\x01\x12\x19\n" +
-	"\x05email\x18\x04 \x01(\tH\x03R\x05email\x88\x01\x01B\v\n" +
-	"\t_usernameB\f\n" +
+	"user.proto\"\xb2\x01\n" +
+	"\x11UpdateUserRequest\x12\x1a\n" +
+	"\busername\x18\x01 \x01(\tR\busername\x12 \n" +
+	"\tfull_name\x18\x02 \x01(\tH\x00R\bfullName\x88\x01\x01\x12\x1f\n" +
+	"\bpassword\x18\x03 \x01(\tH\x01R\bpassword\x88\x01\x01\x12\x19\n" +
+	"\x05email\x18\x04 \x01(\tH\x02R\x05email\x88\x01\x01B\f\n" +
 	"\n" +
 	"_full_nameB\v\n" +
 	"\t_passwordB\b\n" +

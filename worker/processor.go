@@ -10,6 +10,8 @@ import (
 	"github.com/hibiken/asynq"
 	"github.com/rs/zerolog/log"
 	db "github.com/yilinyo/project_bank/db/sqlc"
+	"github.com/yilinyo/project_bank/mail"
+	"github.com/yilinyo/project_bank/util"
 )
 
 const (
@@ -23,11 +25,12 @@ type TaskProcessor interface {
 }
 
 type RedisTaskProcessor struct {
-	server *asynq.Server
-	store  db.Store
+	server      *asynq.Server
+	store       db.Store
+	emailSender mail.EmailSender
 }
 
-func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, store db.Store) TaskProcessor {
+func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, store db.Store, emailSender mail.EmailSender) TaskProcessor {
 	server := asynq.NewServer(redisOpt,
 		asynq.Config{
 			Queues: map[string]int{
@@ -40,8 +43,9 @@ func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, store db.Store) TaskPr
 			Logger: NewLogger(),
 		})
 	return &RedisTaskProcessor{
-		store:  store,
-		server: server,
+		store:       store,
+		server:      server,
+		emailSender: emailSender,
 	}
 }
 
@@ -59,7 +63,27 @@ func (r *RedisTaskProcessor) ProcessTaskSendVerifyEmail(ctx context.Context, tas
 		}
 		return fmt.Errorf("get user wrong: %w", err)
 	}
-	//todo :real send email
+	arg := db.CreateVerifyEmailParams{
+		Username:   user.Username,
+		Email:      user.Email,
+		SecretCode: util.RandomStr(32),
+	}
+	email, err := r.store.CreateVerifyEmail(ctx, arg)
+	if err != nil {
+		return fmt.Errorf("create email wrong: %w", err)
+	}
+	verifyUrl := fmt.Sprintf("http://localhost:8080/v1/email_verify?email_id=%d&secret_code=%s", email.ID, email.SecretCode)
+	subject := "Welcome to simple bank"
+	content := fmt.Sprintf(`Hello %s,<br/>
+	Thank you for registering with us !<br/>
+	Please <a href="%s">click here</a> to verify your email address
+`, user.FullName, verifyUrl)
+	to := []string{user.Email}
+
+	err = r.emailSender.SendEmail(subject, content, to, nil, nil, nil)
+	if err != nil {
+		return fmt.Errorf("send email wrong: %w", err)
+	}
 	log.Info().Str("type", task.Type()).Bytes("payload", task.Payload()).Str("email", user.Email).Msg("processed task")
 	return nil
 }

@@ -3,6 +3,7 @@ package gapi
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/yilinyo/project_bank/token"
@@ -29,6 +30,7 @@ func (server *Server) authorizeUser(ctx context.Context) (*token.Payload, error)
 	accessHeader := authorizations[0]
 	//Bearer xxxxxxx
 	fields := strings.Fields(accessHeader)
+	fmt.Println(fields)
 	if len(fields) != 2 {
 		return nil, errors.New("invalid authorization header format")
 	}

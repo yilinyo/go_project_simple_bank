@@ -4,6 +4,7 @@ package pb;
 import "rpc_create_user.proto";
 import "rpc_user_login.proto";
 import "rpc_update_user.proto";
+import  "rpc_verify_email.proto";
 import "google/api/annotations.proto";
 
 option go_package = "github.com/yilinyo/project_bank/pb";
@@ -37,5 +38,11 @@ service SimpleBank {
 
   }
 
+  rpc verifyEmail (VerifyEmailRequest) returns(VerifyEmailResponse){
+    option (google.api.http) = {
+      get: "/v1/email_verify"
+    };
+
+  }
 
 }

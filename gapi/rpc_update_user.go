@@ -3,8 +3,11 @@ package gapi
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	db "github.com/yilinyo/project_bank/db/sqlc"
 	"github.com/yilinyo/project_bank/pb"
 	"github.com/yilinyo/project_bank/util"
@@ -31,11 +34,11 @@ func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 	arg := db.UpdateUserParams{
 		Username: req.GetUsername(),
 		//HashedPassword: hashedPassword,
-		FullName: sql.NullString{
+		FullName: pgtype.Text{
 			String: req.GetFullName(),
 			Valid:  req.FullName != nil,
 		},
-		Email: sql.NullString{
+		Email: pgtype.Text{
 			String: req.GetEmail(),
 			Valid:  req.Email != nil,
 		},
@@ -45,18 +48,19 @@ func (server *Server) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "failed to hash password: %s", err)
 		}
-		arg.HashedPassword = sql.NullString{
+		arg.HashedPassword = pgtype.Text{
 			String: hashedPassword,
 			Valid:  true,
 		}
-		arg.PasswordChangedAt = sql.NullTime{
+		arg.PasswordChangedAt = pgtype.Timestamptz{
 			Time:  time.Now(),
 			Valid: true,
 		}
 	}
+	fmt.Printf(".....")
 	user, err := server.store.UpdateUser(ctx, arg)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, status.Errorf(codes.NotFound, "failed to find user: %s", err)
 		}
 		return nil, status.Errorf(codes.Internal, "failed to update user: %s", err)

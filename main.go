@@ -2,22 +2,23 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"net"
 	"net/http"
 	"os"
 
 	"github.com/hibiken/asynq"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/yilinyo/project_bank/mail"
 	"github.com/yilinyo/project_bank/worker"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	_ "github.com/lib/pq"
+	_ "github.com/jackc/pgx/v5"
 	"github.com/yilinyo/project_bank/api"
 	db "github.com/yilinyo/project_bank/db/sqlc"
 	"github.com/yilinyo/project_bank/gapi"
@@ -43,7 +44,7 @@ func main() {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	}
 
-	conn, err := sql.Open(config.DBDriver, config.DBSource)
+	connPool, err := pgxpool.New(context.Background(), config.DBSource)
 	if err != nil {
 		log.Fatal().Err(err).Msg("error opening db:")
 	}
@@ -54,10 +55,10 @@ func main() {
 
 	taskDistributor := worker.NewRedisDistributor(redisOpt)
 	runDBMigration(config.MigrationURL, config.DBSource)
-	store := db.NewStore(conn)
+	store := db.NewStore(connPool)
 
 	//开启taskProcess 进行消费
-	go runTaskProcessor(redisOpt, store)
+	go runTaskProcessor(config, redisOpt, store)
 
 	//选择 开启http 还是 grpc 还是httpGateWay
 	go runGatewayServer(config, store, taskDistributor)
@@ -105,7 +106,6 @@ func runGrpcServer(config util.Config, store db.Store, d worker.TaskDistributor)
 }
 
 func runGatewayServer(config util.Config, store db.Store, d worker.TaskDistributor) {
-
 	server, err := gapi.NewServer(config, store, d)
 	if err != nil {
 		log.Fatal().Msg("cannot create server:")
@@ -157,8 +157,14 @@ func runDBMigration(migrationURL string, dbSource string) {
 
 }
 
-func runTaskProcessor(redisOpt asynq.RedisClientOpt, store db.Store) {
-	processor := worker.NewRedisTaskProcessor(redisOpt, store)
+func runTaskProcessor(config util.Config, redisOpt asynq.RedisClientOpt, store db.Store) {
+
+	emailSender := mail.NewGmailSender(
+		config.EmailSenderName,
+		config.EmailSenderAddress,
+		config.EmailSenderPassword,
+	)
+	processor := worker.NewRedisTaskProcessor(redisOpt, store, emailSender)
 	log.Info().Msg("task processor started")
 	err := processor.Start()
 	if err != nil {

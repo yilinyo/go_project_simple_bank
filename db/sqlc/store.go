@@ -2,43 +2,27 @@ package db
 
 import (
 	"context"
-	"database/sql"
-	"fmt"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Store interface {
 	Querier
 	TransferTx(ctx context.Context, arg TransferTxParams) (TransferTxResult, error)
 	CreateUserTx(ctx context.Context, arg CreateUserTxParams) (CreateUserTxResult, error)
+	VerifyEmailTx(ctx context.Context, arg VerifyEmailTxParams) (VerifyEmailTxResult, error)
 }
 
 type SQLStore struct {
 	*Queries
-	db *sql.DB
+	connPool *pgxpool.Pool
 }
 
-func NewStore(db *sql.DB) Store {
+func NewStore(connPool *pgxpool.Pool) Store {
 	return &SQLStore{
-		db:      db,
-		Queries: New(db),
+		connPool: connPool,
+		Queries:  New(connPool),
 	}
-}
-
-func (store *SQLStore) execTx(ctx context.Context, fn func(*Queries) error) error {
-	tx, err := store.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	q := New(tx)
-	err = fn(q)
-	//发生错误 回滚
-	if err != nil {
-		if rbErr := tx.Rollback(); rbErr != nil {
-			return fmt.Errorf("tx err :%v,rberr: %v", err, rbErr)
-		}
-		return err
-	}
-	return tx.Commit()
 }
 
 //type TransferTxParams struct {
